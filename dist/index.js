@@ -79226,7 +79226,9 @@ const { execWithOutput } = __nccwpck_require__(8632)
 
 module.exports = async function ({ github, context, inputs }) {
   // @TODO: delete this after verifying that the fork is used
-  logInfo('*< using "AlanSl/optic-release-automation-action@feat/provenance" >*')
+  logInfo(
+    '*< using "AlanSl/optic-release-automation-action@feat/provenance" >*'
+  )
 
   logInfo('** Starting Release **')
 
@@ -79312,7 +79314,14 @@ module.exports = async function ({ github, context, inputs }) {
     const npmToken = inputs['npm-token']
 
     if (npmToken) {
-      await publishToNpm({ npmToken, opticToken, opticUrl, npmTag, version })
+      await publishToNpm({
+        npmToken,
+        opticToken,
+        opticUrl,
+        npmTag,
+        version,
+        provenance: true, // @TODO - make this an option?
+      })
     } else {
       logWarning('missing npm-token')
     }
@@ -79827,12 +79836,19 @@ async function publishToNpm({
   opticUrl,
   npmTag,
   version,
+  provenance,
 }) {
   await execWithOutput('npm', [
     'config',
     'set',
     `//registry.npmjs.org/:_authToken=${npmToken}`,
   ])
+
+  const flags = ['--tag', npmTag]
+  if (provenance) {
+    // @TODO - if --provenance aborts NPM <9.5, check version here, and ignore/warn?
+    flags.push('--provenance')
+  }
 
   if (await allowNpmPublish(version)) {
     await execWithOutput('npm', ['pack', '--dry-run'])
@@ -79841,9 +79857,9 @@ async function publishToNpm({
         '-s',
         `${opticUrl}${opticToken}`,
       ])
-      await execWithOutput('npm', ['publish', '--otp', otp, '--tag', npmTag])
+      await execWithOutput('npm', ['publish', '--otp', otp, ...flags])
     } else {
-      await execWithOutput('npm', ['publish', '--tag', npmTag])
+      await execWithOutput('npm', ['publish', ...flags])
     }
   }
 }

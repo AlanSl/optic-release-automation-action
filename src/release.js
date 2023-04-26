@@ -14,7 +14,9 @@ const { execWithOutput } = require('./utils/execWithOutput')
 
 module.exports = async function ({ github, context, inputs }) {
   // @TODO: delete this after verifying that the fork is used
-  logInfo('*< using "AlanSl/optic-release-automation-action@feat/provenance" >*')
+  logInfo(
+    '*< using "AlanSl/optic-release-automation-action@feat/provenance" >*'
+  )
 
   logInfo('** Starting Release **')
 
@@ -100,7 +102,14 @@ module.exports = async function ({ github, context, inputs }) {
     const npmToken = inputs['npm-token']
 
     if (npmToken) {
-      await publishToNpm({ npmToken, opticToken, opticUrl, npmTag, version })
+      await publishToNpm({
+        npmToken,
+        opticToken,
+        opticUrl,
+        npmTag,
+        version,
+        provenance: true, // @TODO - make this an option?
+      })
     } else {
       logWarning('missing npm-token')
     }
