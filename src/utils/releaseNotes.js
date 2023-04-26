@@ -47,7 +47,7 @@ function getPRBody(
 
   // Should strictly contain only non-sensitive data
   const releaseMeta = {
-    id: draftRelease.id,
+    id: draftRelease?.id || '',
     version: newVersion,
     npmTag: inputs['npm-tag'],
     opticUrl: inputs['optic-url'],
