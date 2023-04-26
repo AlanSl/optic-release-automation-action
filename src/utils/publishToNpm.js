@@ -51,6 +51,9 @@ async function publishToNpm({
   version,
   provenance,
 }) {
+  const npmVersion = await execWithOutput('npm -v')
+  logInfo(`>>>>>>>>>> npmVersion: ${npmVersion}`)
+
   await execWithOutput('npm', [
     'config',
     'set',
