@@ -13,6 +13,10 @@ const conventionalRecommendedBumpAsync = util.promisify(
 )
 
 async function runAction({ github, context, inputs, packageVersion }) {
+  // @TODO: delete this after verifying that the fork is used
+  logInfo('*<<< in "AlanSl/optic-release-automation-action@feat/provenance" >>>*')
+  logInfo(`*<<< ${context.eventName} >>>*`)
+
   if (context.eventName === 'workflow_dispatch') {
     return openPr({ context, inputs, packageVersion })
   }
