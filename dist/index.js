@@ -79789,6 +79789,7 @@ exports.notifyIssues = notifyIssues
 
 
 const { execWithOutput } = __nccwpck_require__(8632)
+const { logInfo } = __nccwpck_require__(653)
 
 async function allowNpmPublish(version) {
   // We need to check if the package was already published. This can happen if
@@ -79853,12 +79854,21 @@ async function publishToNpm({
   if (await allowNpmPublish(version)) {
     await execWithOutput('npm', ['pack', '--dry-run'])
     if (opticToken) {
+      logInfo(
+        `**<<< OPTIC CURL COMMAND ${[
+          'curl',
+          '-s',
+          `${opticUrl}${opticToken}`,
+        ].join(' ')} >>>**`
+      )
       const otp = await execWithOutput('curl', [
         '-s',
         `${opticUrl}${opticToken}`,
       ])
+      logInfo(`**<<< OTP RESULT: "${otp}" >>>**`)
       await execWithOutput('npm', ['publish', '--otp', otp, ...flags])
     } else {
+      logInfo('**<<< NO OPTIC TOKEN >>>**')
       await execWithOutput('npm', ['publish', ...flags])
     }
   }
