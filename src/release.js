@@ -13,6 +13,9 @@ const { logError, logInfo, logWarning } = require('./log')
 const { execWithOutput } = require('./utils/execWithOutput')
 
 module.exports = async function ({ github, context, inputs }) {
+  // @TODO: delete this after verifying that the fork is used
+  logInfo('*< using "AlanSl/optic-release-automation-action@feat/provenance" >*')
+
   logInfo('** Starting Release **')
 
   const pr = context.payload.pull_request
