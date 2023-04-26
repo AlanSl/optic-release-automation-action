@@ -79313,6 +79313,9 @@ module.exports = async function ({ github, context, inputs }) {
     const opticToken = inputs['optic-token']
     const npmToken = inputs['npm-token']
 
+    const provenance = inputs['provenance']
+    logInfo(`>>>>>>>> ${provenance} (${typeof provenance})`)
+
     if (npmToken) {
       await publishToNpm({
         npmToken,
