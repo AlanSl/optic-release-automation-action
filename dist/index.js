@@ -79577,16 +79577,14 @@ const { exec } = __nccwpck_require__(1514)
  * @param {{cwd?: string}} options
  * @returns Promise<string>
  */
-async function execWithOutput(cmd, args, { cwd } = {}) {
+async function execWithOutput(cmd, args, { cwd, ...options } = {}) {
   let output = ''
   let errorOutput = ''
 
   const stdoutDecoder = new StringDecoder('utf8')
   const stderrDecoder = new StringDecoder('utf8')
 
-  const options = {
-    silent: false,
-  }
+  options.silent = false
 
   /* istanbul ignore else */
   if (cwd !== '') {
