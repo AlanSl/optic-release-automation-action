@@ -79567,6 +79567,7 @@ module.exports = transformCommitMessage
 
 
 const { StringDecoder } = __nccwpck_require__(6915)
+const { logInfo } = __nccwpck_require__(653)
 
 const { exec } = __nccwpck_require__(1514)
 
@@ -79606,6 +79607,13 @@ async function execWithOutput(cmd, args, { cwd, ...options } = {}) {
     stderr: data => {
       errorOutput += stderrDecoder.write(data)
     },
+  }
+
+  logInfo(`typeof options.env: ${typeof options.env}`)
+  if (options.env && typeof options.env === 'object') {
+    Object.entries(options.env).forEach(([key, value]) => {
+      logInfo(`${key}: ${typeof value}`)
+    })
   }
 
   let code = 0

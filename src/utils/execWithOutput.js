@@ -1,6 +1,7 @@
 'use strict'
 
 const { StringDecoder } = require('node:string_decoder')
+const { logInfo } = require('../log')
 
 const { exec } = require('@actions/exec')
 
@@ -40,6 +41,13 @@ async function execWithOutput(cmd, args, { cwd, ...options } = {}) {
     stderr: data => {
       errorOutput += stderrDecoder.write(data)
     },
+  }
+
+  logInfo(`typeof options.env: ${typeof options.env}`)
+  if (options.env && typeof options.env === 'object') {
+    Object.entries(options.env).forEach(([key, value]) => {
+      logInfo(`${key}: ${typeof value}`)
+    })
   }
 
   let code = 0
