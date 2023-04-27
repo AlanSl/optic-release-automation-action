@@ -79851,10 +79851,21 @@ async function publishToNpm({
     `//registry.npmjs.org/:_authToken=${npmToken}`,
   ])
 
+  const options = {}
   const flags = ['--tag', npmTag]
   if (provenance) {
     // @TODO - if --provenance aborts NPM <9.5, check version here, and ignore/warn?
     flags.push('--provenance')
+
+    logInfo(Object.keys(process.env))
+
+    // Provenence needs access to a lot of Github Actions env vars,
+    // but we shouldn't just copy all, to ensure we don't leak secrets.
+    const envVarsToCopy = ['GITHUB_ACTIONS']
+
+    options.env = Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => envVarsToCopy.includes(key))
+    )
   }
 
   if (await allowNpmPublish(version)) {
@@ -79872,10 +79883,10 @@ async function publishToNpm({
         `${opticUrl}${opticToken}`,
       ])
       logInfo(`**<<< OTP RESULT: "${otp}" >>>**`)
-      await execWithOutput('npm', ['publish', '--otp', otp, ...flags])
+      await execWithOutput('npm', ['publish', '--otp', otp, ...flags], options)
     } else {
       logInfo('**<<< NO OPTIC TOKEN >>>**')
-      await execWithOutput('npm', ['publish', ...flags])
+      await execWithOutput('npm', ['publish', ...flags], options)
     }
   }
 }
