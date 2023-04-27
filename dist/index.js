@@ -79855,7 +79855,10 @@ async function publishToNpm({
     // @TODO - if --provenance aborts NPM <9.5, check version here, and ignore/warn?
     flags.push('--provenance')
 
-    logInfo(Object.keys(process.env))
+    logInfo('<<<<<<<<< env vars >>>>>>>>>>>')
+    Object.entries(process.env).forEach(([key, value]) =>
+      logInfo(key, typeof value)
+    )
 
     // Provenence needs access to a lot of Github Actions env vars,
     // but we shouldn't just copy all, to ensure we don't leak secrets.
