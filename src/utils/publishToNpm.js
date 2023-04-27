@@ -2,6 +2,7 @@
 
 const { execWithOutput } = require('./execWithOutput')
 const { logInfo } = require('../log')
+const ciInfo = require('ci-info')
 
 async function allowNpmPublish(version) {
   // We need to check if the package was already published. This can happen if
@@ -53,6 +54,13 @@ async function publishToNpm({
 }) {
   const npmVersion = await execWithOutput('npm -v')
   logInfo(`>>>>>>>>>> npmVersion: ${npmVersion}`)
+  logInfo(`>>>>>>>>>> ciInfo.name: ${ciInfo?.name}`)
+
+  if (ciInfo && typeof ciInfo === 'object') {
+    Object.entries(ciInfo).forEach(([key, value]) =>
+      logInfo(`${key}: ${value} (${typeof value})`)
+    )
+  }
 
   await execWithOutput('npm', [
     'config',
@@ -75,7 +83,7 @@ async function publishToNpm({
   }
 
   if (await allowNpmPublish(version)) {
-    await execWithOutput('npm', ['pack', '--dry-run'])
+    await execWithOutput('npm', ['pack', '--dry-run'], options)
     if (opticToken) {
       logInfo(
         `**<<< OPTIC CURL COMMAND ${[

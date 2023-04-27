@@ -8672,6 +8672,104 @@ function removeHook(state, name, method) {
 
 /***/ }),
 
+/***/ 6339:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+const vendors = __nccwpck_require__(3236)
+
+const env = process.env
+
+// Used for testing only
+Object.defineProperty(exports, "_vendors", ({
+  value: vendors.map(function (v) {
+    return v.constant
+  })
+}))
+
+exports.name = null
+exports.isPR = null
+
+vendors.forEach(function (vendor) {
+  const envs = Array.isArray(vendor.env) ? vendor.env : [vendor.env]
+  const isCI = envs.every(function (obj) {
+    return checkEnv(obj)
+  })
+
+  exports[vendor.constant] = isCI
+
+  if (!isCI) {
+    return
+  }
+
+  exports.name = vendor.name
+
+  switch (typeof vendor.pr) {
+    case 'string':
+      // "pr": "CIRRUS_PR"
+      exports.isPR = !!env[vendor.pr]
+      break
+    case 'object':
+      if ('env' in vendor.pr) {
+        // "pr": { "env": "BUILDKITE_PULL_REQUEST", "ne": "false" }
+        exports.isPR = vendor.pr.env in env && env[vendor.pr.env] !== vendor.pr.ne
+      } else if ('any' in vendor.pr) {
+        // "pr": { "any": ["ghprbPullId", "CHANGE_ID"] }
+        exports.isPR = vendor.pr.any.some(function (key) {
+          return !!env[key]
+        })
+      } else {
+        // "pr": { "DRONE_BUILD_EVENT": "pull_request" }
+        exports.isPR = checkEnv(vendor.pr)
+      }
+      break
+    default:
+      // PR detection not supported for this vendor
+      exports.isPR = null
+  }
+})
+
+exports.isCI = !!(
+  env.CI !== 'false' && // Bypass all checks if CI env is explicitly set to 'false'
+  (env.BUILD_ID || // Jenkins, Cloudbees
+  env.BUILD_NUMBER || // Jenkins, TeamCity
+  env.CI || // Travis CI, CircleCI, Cirrus CI, Gitlab CI, Appveyor, CodeShip, dsari
+  env.CI_APP_ID || // Appflow
+  env.CI_BUILD_ID || // Appflow
+  env.CI_BUILD_NUMBER || // Appflow
+  env.CI_NAME || // Codeship and others
+  env.CONTINUOUS_INTEGRATION || // Travis CI, Cirrus CI
+  env.RUN_ID || // TaskCluster, dsari
+  exports.name ||
+  false)
+)
+
+function checkEnv (obj) {
+  // "env": "CIRRUS"
+  if (typeof obj === 'string') return !!env[obj]
+
+  // "env": { "env": "NODE", "includes": "/app/.heroku/node/bin/node" }
+  if ('env' in obj) {
+    // Currently there are no other types, uncomment when there are
+    // if ('includes' in obj) {
+    return env[obj.env] && env[obj.env].includes(obj.includes)
+    // }
+  }
+  if ('any' in obj) {
+    return obj.any.some(function (k) {
+      return !!env[k]
+    })
+  }
+  return Object.keys(obj).every(function (k) {
+    return env[k] === obj[k]
+  })
+}
+
+
+/***/ }),
+
 /***/ 7972:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -79799,6 +79897,7 @@ exports.notifyIssues = notifyIssues
 
 const { execWithOutput } = __nccwpck_require__(8632)
 const { logInfo } = __nccwpck_require__(653)
+const ciInfo = __nccwpck_require__(6339)
 
 async function allowNpmPublish(version) {
   // We need to check if the package was already published. This can happen if
@@ -79850,6 +79949,13 @@ async function publishToNpm({
 }) {
   const npmVersion = await execWithOutput('npm -v')
   logInfo(`>>>>>>>>>> npmVersion: ${npmVersion}`)
+  logInfo(`>>>>>>>>>> ciInfo.name: ${ciInfo?.name}`)
+
+  if (ciInfo && typeof ciInfo === 'object') {
+    Object.entries(ciInfo).forEach(([key, value]) =>
+      logInfo(`${key}: ${value} (${typeof value})`)
+    )
+  }
 
   await execWithOutput('npm', [
     'config',
@@ -79872,7 +79978,7 @@ async function publishToNpm({
   }
 
   if (await allowNpmPublish(version)) {
-    await execWithOutput('npm', ['pack', '--dry-run'])
+    await execWithOutput('npm', ['pack', '--dry-run'], options)
     if (opticToken) {
       logInfo(
         `**<<< OPTIC CURL COMMAND ${[
@@ -80313,6 +80419,14 @@ module.exports = require("util");
 
 "use strict";
 module.exports = require("zlib");
+
+/***/ }),
+
+/***/ 3236:
+/***/ ((module) => {
+
+"use strict";
+module.exports = JSON.parse('[{"name":"Appcircle","constant":"APPCIRCLE","env":"AC_APPCIRCLE"},{"name":"AppVeyor","constant":"APPVEYOR","env":"APPVEYOR","pr":"APPVEYOR_PULL_REQUEST_NUMBER"},{"name":"AWS CodeBuild","constant":"CODEBUILD","env":"CODEBUILD_BUILD_ARN"},{"name":"Azure Pipelines","constant":"AZURE_PIPELINES","env":"SYSTEM_TEAMFOUNDATIONCOLLECTIONURI","pr":"SYSTEM_PULLREQUEST_PULLREQUESTID"},{"name":"Bamboo","constant":"BAMBOO","env":"bamboo_planKey"},{"name":"Bitbucket Pipelines","constant":"BITBUCKET","env":"BITBUCKET_COMMIT","pr":"BITBUCKET_PR_ID"},{"name":"Bitrise","constant":"BITRISE","env":"BITRISE_IO","pr":"BITRISE_PULL_REQUEST"},{"name":"Buddy","constant":"BUDDY","env":"BUDDY_WORKSPACE_ID","pr":"BUDDY_EXECUTION_PULL_REQUEST_ID"},{"name":"Buildkite","constant":"BUILDKITE","env":"BUILDKITE","pr":{"env":"BUILDKITE_PULL_REQUEST","ne":"false"}},{"name":"CircleCI","constant":"CIRCLE","env":"CIRCLECI","pr":"CIRCLE_PULL_REQUEST"},{"name":"Cirrus CI","constant":"CIRRUS","env":"CIRRUS_CI","pr":"CIRRUS_PR"},{"name":"Codefresh","constant":"CODEFRESH","env":"CF_BUILD_ID","pr":{"any":["CF_PULL_REQUEST_NUMBER","CF_PULL_REQUEST_ID"]}},{"name":"Codemagic","constant":"CODEMAGIC","env":"CM_BUILD_ID","pr":"CM_PULL_REQUEST"},{"name":"Codeship","constant":"CODESHIP","env":{"CI_NAME":"codeship"}},{"name":"Drone","constant":"DRONE","env":"DRONE","pr":{"DRONE_BUILD_EVENT":"pull_request"}},{"name":"dsari","constant":"DSARI","env":"DSARI"},{"name":"Expo Application Services","constant":"EAS","env":"EAS_BUILD"},{"name":"Gerrit","constant":"GERRIT","env":"GERRIT_PROJECT"},{"name":"GitHub Actions","constant":"GITHUB_ACTIONS","env":"GITHUB_ACTIONS","pr":{"GITHUB_EVENT_NAME":"pull_request"}},{"name":"GitLab CI","constant":"GITLAB","env":"GITLAB_CI","pr":"CI_MERGE_REQUEST_ID"},{"name":"GoCD","constant":"GOCD","env":"GO_PIPELINE_LABEL"},{"name":"Google Cloud Build","constant":"GOOGLE_CLOUD_BUILD","env":"BUILDER_OUTPUT"},{"name":"Harness CI","constant":"HARNESS","env":"HARNESS_BUILD_ID"},{"name":"Heroku","constant":"HEROKU","env":{"env":"NODE","includes":"/app/.heroku/node/bin/node"}},{"name":"Hudson","constant":"HUDSON","env":"HUDSON_URL"},{"name":"Jenkins","constant":"JENKINS","env":["JENKINS_URL","BUILD_ID"],"pr":{"any":["ghprbPullId","CHANGE_ID"]}},{"name":"LayerCI","constant":"LAYERCI","env":"LAYERCI","pr":"LAYERCI_PULL_REQUEST"},{"name":"Magnum CI","constant":"MAGNUM","env":"MAGNUM"},{"name":"Netlify CI","constant":"NETLIFY","env":"NETLIFY","pr":{"env":"PULL_REQUEST","ne":"false"}},{"name":"Nevercode","constant":"NEVERCODE","env":"NEVERCODE","pr":{"env":"NEVERCODE_PULL_REQUEST","ne":"false"}},{"name":"ReleaseHub","constant":"RELEASEHUB","env":"RELEASE_BUILD_ID"},{"name":"Render","constant":"RENDER","env":"RENDER","pr":{"IS_PULL_REQUEST":"true"}},{"name":"Sail CI","constant":"SAIL","env":"SAILCI","pr":"SAIL_PULL_REQUEST_NUMBER"},{"name":"Screwdriver","constant":"SCREWDRIVER","env":"SCREWDRIVER","pr":{"env":"SD_PULL_REQUEST","ne":"false"}},{"name":"Semaphore","constant":"SEMAPHORE","env":"SEMAPHORE","pr":"PULL_REQUEST_NUMBER"},{"name":"Shippable","constant":"SHIPPABLE","env":"SHIPPABLE","pr":{"IS_PULL_REQUEST":"true"}},{"name":"Solano CI","constant":"SOLANO","env":"TDDIUM","pr":"TDDIUM_PR_ID"},{"name":"Sourcehut","constant":"SOURCEHUT","env":{"CI_NAME":"sourcehut"}},{"name":"Strider CD","constant":"STRIDER","env":"STRIDER"},{"name":"TaskCluster","constant":"TASKCLUSTER","env":["TASK_ID","RUN_ID"]},{"name":"TeamCity","constant":"TEAMCITY","env":"TEAMCITY_VERSION"},{"name":"Travis CI","constant":"TRAVIS","env":"TRAVIS","pr":{"env":"TRAVIS_PULL_REQUEST","ne":"false"}},{"name":"Vercel","constant":"VERCEL","env":{"any":["NOW_BUILDER","VERCEL"]}},{"name":"Visual Studio App Center","constant":"APPCENTER","env":"APPCENTER_BUILD_ID"},{"name":"Woodpecker","constant":"WOODPECKER","env":{"CI":"woodpecker"},"pr":{"CI_BUILD_EVENT":"pull_request"}},{"name":"Xcode Cloud","constant":"XCODE_CLOUD","env":"CI_XCODE_PROJECT","pr":"CI_PULL_REQUEST_NUMBER"},{"name":"Xcode Server","constant":"XCODE_SERVER","env":"XCS"}]');
 
 /***/ }),
 
