@@ -79852,20 +79852,14 @@ async function publishToNpm({
   const options = {}
   const flags = ['--tag', npmTag]
   if (provenance) {
-    // @TODO - if --provenance aborts NPM <9.5, check version here, and ignore/warn?
     flags.push('--provenance')
 
-    logInfo('<<<<<<<<< env vars >>>>>>>>>>>')
-    Object.entries(process.env).forEach(([key, value]) =>
-      logInfo(key, typeof value)
-    )
-
-    // Provenence needs access to a lot of Github Actions env vars,
-    // but we shouldn't just copy all, to ensure we don't leak secrets.
-    const envVarsToCopy = ['GITHUB_ACTIONS']
-
+    // Pass GitHub Actions env vars to NPM so it can generate provenance from them.
     options.env = Object.fromEntries(
-      Object.entries(process.env).filter(([key]) => envVarsToCopy.includes(key))
+      // Inputs are specific to our custom action and may include repo secrets.
+      // Everything else comes from Github Actions itself: pass all of those
+      // because we can't predict what future implementations may need.
+      Object.entries(process.env).filter(([key]) => !key.startsWith('INPUT_'))
     )
   }
 
