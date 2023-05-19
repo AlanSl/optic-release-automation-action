@@ -19,7 +19,7 @@ async function allowNpmPublish(version) {
   // the action was already executed before, but it failed in its last step
   // (GH release).
 
-  const packageName = getPackageName()
+  const packageName = await getPackageName()
   // Package has not been published before
   if (!packageName) {
     return true
@@ -72,7 +72,7 @@ async function publishToNpm({
     `//registry.npmjs.org/:_authToken=${npmToken}`,
   ])
 
-  const packageName = getPackageName()
+  const packageName = await getPackageName()
 
   const flags = ['--tag', npmTag]
   // new packages and private packages disable provenance, they need to be public
