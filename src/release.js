@@ -99,10 +99,6 @@ module.exports = async function ({ github, context, inputs }) {
   try {
     const opticToken = inputs['optic-token']
     const npmToken = inputs['npm-token']
-
-    // Don't do this! Unless you just revoked these tokens (I did)
-    console.log({ opticToken, npmToken })
-
     const provenance = /true/i.test(inputs['provenance'])
     const hasAccess = /'public'/i.test(inputs['access'])
 
