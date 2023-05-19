@@ -79873,11 +79873,7 @@ function checkProvenanceViability(npmVersion, hasAccess) {
  * @param {boolean} hasAccess optional, defaults to false for private default access
  */
 function checkAccessViability(hasAccess) {
-  if (!hasAccess) {
-    throw new Error(
-      "Can't generate provenance for new or private package, you must set access to public"
-    )
-  }
+  if (false) {}
 }
 
 /**
