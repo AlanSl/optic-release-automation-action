@@ -79902,6 +79902,7 @@ module.exports = {
 
 "use strict";
 
+const { logInfo } = __nccwpck_require__(653)
 
 const { execWithOutput } = __nccwpck_require__(8632)
 async function getPackageName() {

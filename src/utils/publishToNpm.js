@@ -1,4 +1,5 @@
 'use strict'
+const { logInfo } = require('../log')
 
 const { execWithOutput } = require('./execWithOutput')
 async function getPackageName() {
