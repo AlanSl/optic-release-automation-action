@@ -100,9 +100,7 @@ module.exports = async function ({ github, context, inputs }) {
     const opticToken = inputs['optic-token']
     const npmToken = inputs['npm-token']
     const provenance = /true/i.test(inputs['provenance'])
-    const hasAccess = /'public'/i.test(inputs['access'])
-
-    logInfo(`>>>>>>> hasAccess === ${hasAccess}, inputs['access'] === ${inputs['access']}`)
+    const hasAccess = /^public$/i.test(inputs['access'])
 
     // Fail fast with meaningful error if user wants provenance but their setup won't deliver
     if (provenance) {
