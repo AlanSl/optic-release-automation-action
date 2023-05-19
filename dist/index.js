@@ -79310,6 +79310,8 @@ module.exports = async function ({ github, context, inputs }) {
     const provenance = /true/i.test(inputs['provenance'])
     const hasAccess = /'public'/i.test(inputs['access'])
 
+    logInfo(`>>>>>>> hasAccess === ${hasAccess}, inputs['access'] === ${inputs['access']}`)
+
     // Fail fast with meaningful error if user wants provenance but their setup won't deliver
     if (provenance) {
       const npmVersion = await getNpmVersion()
@@ -79990,8 +79992,11 @@ async function publishToNpm({
         '-s',
         `${opticUrl}${opticToken}`,
       ])
+
+      logInfo(`PUBLISH has otp WITH >>>>>>>>> ${['npm', 'publish', '--otp', otp, ...flags].join(' ')}`)
       await execWithOutput('npm', ['publish', '--otp', otp, ...flags])
     } else {
+      logInfo(`PUBLISH no otp WITH >>>>>>>>> ${['npm', 'publish', ...flags].join(' ')}`)
       await execWithOutput('npm', ['publish', ...flags])
     }
   }

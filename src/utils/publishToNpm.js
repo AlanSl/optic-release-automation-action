@@ -87,8 +87,11 @@ async function publishToNpm({
         '-s',
         `${opticUrl}${opticToken}`,
       ])
+
+      logInfo(`PUBLISH has otp WITH >>>>>>>>> ${['npm', 'publish', '--otp', otp, ...flags].join(' ')}`)
       await execWithOutput('npm', ['publish', '--otp', otp, ...flags])
     } else {
+      logInfo(`PUBLISH no otp WITH >>>>>>>>> ${['npm', 'publish', ...flags].join(' ')}`)
       await execWithOutput('npm', ['publish', ...flags])
     }
   }
