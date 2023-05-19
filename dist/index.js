@@ -79979,8 +79979,8 @@ async function publishToNpm({
 
   const flags = ['--tag', npmTag]
   // new packages and private packages disable provenance, they need to be public
-  if (!packageName && hasAccess && provenance) {
-    flags.push('--provenance --access public')
+  if (hasAccess && provenance) {
+    flags.push('--provenance', '--access', 'public')
   }
 
   if (await allowNpmPublish(version)) {
