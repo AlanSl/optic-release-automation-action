@@ -100,7 +100,14 @@ module.exports = async function ({ github, context, inputs }) {
     const opticToken = inputs['optic-token']
     const npmToken = inputs['npm-token']
     const provenance = /true/i.test(inputs['provenance'])
-    const access = inputs['access'] 
+    const access = inputs['access']
+
+    // Can't limit custom action inputs to fixed options like "choice" type in a manual action
+    const validAccessOptions = ['public', 'restricted'] 
+    if (access && !validAccessOptions.includes(access)) {
+      core.setFailed(`Invalid "access" option provided ("${access}"), should be one of "${validAccessOptions.join('", "')}"`)
+      return
+    }
 
     // Fail fast with meaningful error if user wants provenance but their setup won't deliver
     if (provenance) {
