@@ -79855,25 +79855,13 @@ function checkPermissions(npmVersion) {
  * @see https://docs.npmjs.com/generating-provenance-statements
  *
  * @param {string} npmVersion
- * @param {boolean} hasAccess optional, defaults to false for private default access
  */
-function checkProvenanceViability(npmVersion, hasAccess) {
+function checkProvenanceViability(npmVersion) {
   if (!npmVersion) throw new Error('Current npm version not provided')
   checkIsSupported(npmVersion)
   checkPermissions(npmVersion)
-  checkAccessViability(hasAccess)
   // There are various other provenance requirements, such as specific package.json properties, but these
   // may change in future NPM versions, and do fail with meaningful errors, so we let NPM handle those.
-}
-
-/**
- * Fail fast and throw a meaningful error if Access doesn't allow Provenance
- * @see https://docs.npmjs.com/generating-provenance-statements
- *
- * @param {boolean} hasAccess optional, defaults to false for private default access
- */
-function checkAccessViability(hasAccess) {
-  if (false) {}
 }
 
 /**
@@ -79903,7 +79891,12 @@ module.exports = {
 const { logInfo } = __nccwpck_require__(653)
 
 const { execWithOutput } = __nccwpck_require__(8632)
-async function getPackageName() {
+
+async function allowNpmPublish(version) {
+  // We need to check if the package was already published. This can happen if
+  // the action was already executed before, but it failed in its last step
+  // (GH release).
+
   let packageName = null
   try {
     const packageInfo = await execWithOutput('npm', ['view', '--json'])
@@ -79915,15 +79908,6 @@ async function getPackageName() {
       throw error
     }
   }
-
-  return packageName
-}
-async function allowNpmPublish(version) {
-  // We need to check if the package was already published. This can happen if
-  // the action was already executed before, but it failed in its last step
-  // (GH release).
-
-  const packageName = await getPackageName()
   // Package has not been published before
   if (!packageName) {
     return true
@@ -79949,18 +79933,7 @@ async function allowNpmPublish(version) {
 
   return !packageVersionInfo
 }
-/**
- * 
- * @param {
- *  npmToken,
-    opticToken,
-    opticUrl,
-    npmTag,
-    version,
-    provenance: boolean
-    hasAccess: boolean
- * }  
- */
+
 async function publishToNpm({
   npmToken,
   opticToken,
@@ -79968,7 +79941,7 @@ async function publishToNpm({
   npmTag,
   version,
   provenance,
-  hasAccess,
+  access,
 }) {
   await execWithOutput('npm', [
     'config',
@@ -79976,12 +79949,14 @@ async function publishToNpm({
     `//registry.npmjs.org/:_authToken=${npmToken}`,
   ])
 
-  const packageName = await getPackageName()
-
   const flags = ['--tag', npmTag]
-  // new packages and private packages disable provenance, they need to be public
-  if (hasAccess && provenance) {
-    flags.push('--provenance', '--access', 'public')
+
+  if (access) {
+    flags.push('--access', access)
+  }
+
+  if (provenance) {
+    flags.push('--provenance')
   }
 
   if (await allowNpmPublish(version)) {
@@ -79991,11 +79966,8 @@ async function publishToNpm({
         '-s',
         `${opticUrl}${opticToken}`,
       ])
-
-      logInfo(`PUBLISH has otp WITH >>>>>>>>> ${['npm', 'publish', '--otp', otp, ...flags].join(' ')}`)
       await execWithOutput('npm', ['publish', '--otp', otp, ...flags])
     } else {
-      logInfo(`PUBLISH no otp WITH >>>>>>>>> ${['npm', 'publish', ...flags].join(' ')}`)
       await execWithOutput('npm', ['publish', ...flags])
     }
   }
