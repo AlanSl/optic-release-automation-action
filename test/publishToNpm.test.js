@@ -4,7 +4,10 @@ const tap = require('tap')
 const sinon = require('sinon')
 const proxyquire = require('proxyquire')
 
-const setup = () => {
+const setup = ({
+  packageName = 'fakeTestPkg',
+  unpublished = false
+} = {}) => {
   const execWithOutputStub = sinon.stub()
   execWithOutputStub
     .withArgs('curl', [
@@ -14,10 +17,10 @@ const setup = () => {
     .returns('otp123')
   execWithOutputStub
     .withArgs('npm', ['view', '--json'])
-    .returns('{"name":"fakeTestPkg"}')
+    .returns(unpublished ? null : `{"name":"${packageName}"}`)
 
   // npm behavior < v8.13.0
-  execWithOutputStub.withArgs('npm', ['view', 'fakeTestPkg@v5.1.3']).returns('')
+  execWithOutputStub.withArgs('npm', ['view', `${packageName}@v5.1.3`]).returns('')
 
   const publishToNpmProxy = proxyquire('../src/utils/publishToNpm', {
     './execWithOutput': { execWithOutput: execWithOutputStub },
@@ -284,8 +287,11 @@ tap.test(
   }
 )
 
-tap.test('Adds --provenance flag when provenance option provided', async () => {
-  const { publishToNpmProxy, execWithOutputStub } = setup()
+tap.test('Adds --provenance flag and not --access when provenance option provided to published package', async () => {
+  const { publishToNpmProxy, execWithOutputStub } = setup({
+    unpublished: false,
+    packageName: 'fakeTestPkg'
+  })
   await publishToNpmProxy.publishToNpm({
     npmToken: 'a-token',
     opticUrl: 'https://optic-test.run.app/api/generate/',
@@ -301,6 +307,51 @@ tap.test('Adds --provenance flag when provenance option provided', async () => {
     '--provenance',
   ])
 })
+
+tap.test('Adds --access public flag when provenance added to unpublished unscoped package', async () => {
+  const { publishToNpmProxy, execWithOutputStub } = setup({
+    unpublished: true,
+    packageName: 'fakeTestPkg'
+  })
+  await publishToNpmProxy.publishToNpm({
+    npmToken: 'a-token',
+    opticUrl: 'https://optic-test.run.app/api/generate/',
+    npmTag: 'latest',
+    version: 'v5.1.3',
+    provenance: true,
+  })
+
+  sinon.assert.calledWithExactly(execWithOutputStub, 'npm', [
+    'publish',
+    '--tag',
+    'latest',
+    '--access',
+    'public',
+    '--provenance',
+  ])
+})
+
+tap.test('No --access flag when provenance added to unpublished scoped package', async () => {
+  const { publishToNpmProxy, execWithOutputStub } = setup({
+    unpublished: true,
+    packageName: '@nearform/fakeTestPkg'
+  })
+  await publishToNpmProxy.publishToNpm({
+    npmToken: 'a-token',
+    opticUrl: 'https://optic-test.run.app/api/generate/',
+    npmTag: 'latest',
+    version: 'v5.1.3',
+    provenance: true,
+  })
+
+  sinon.assert.calledWithExactly(execWithOutputStub, 'npm', [
+    'publish',
+    '--tag',
+    'latest',
+    '--provenance',
+  ])
+})
+
 
 tap.test('Adds --access flag if provided as an input', async () => {
   const { publishToNpmProxy, execWithOutputStub } = setup()
