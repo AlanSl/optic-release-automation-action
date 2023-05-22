@@ -79308,12 +79308,19 @@ module.exports = async function ({ github, context, inputs }) {
     const opticToken = inputs['optic-token']
     const npmToken = inputs['npm-token']
     const provenance = /true/i.test(inputs['provenance'])
-    const hasAccess = /^public$/i.test(inputs['access'])
+    const access = inputs['access']
+
+    // Can't limit custom action inputs to fixed options like "choice" type in a manual action
+    const validAccessOptions = ['public', 'restricted'] 
+    if (access && !validAccessOptions.includes(access)) {
+      core.setFailed(`Invalid "access" option provided ("${access}"), should be one of "${validAccessOptions.join('", "')}"`)
+      return
+    }
 
     // Fail fast with meaningful error if user wants provenance but their setup won't deliver
     if (provenance) {
       const npmVersion = await getNpmVersion()
-      checkProvenanceViability(npmVersion, hasAccess)
+      checkProvenanceViability(npmVersion)
     }
 
     if (npmToken) {
@@ -79324,7 +79331,7 @@ module.exports = async function ({ github, context, inputs }) {
         npmTag,
         version,
         provenance,
-        hasAccess
+        access
       })
     } else {
       logWarning('missing npm-token')
@@ -79874,7 +79881,6 @@ async function getNpmVersion() {
 
 module.exports = {
   checkProvenanceViability,
-  checkAccessViability,
   getNpmVersion,
   checkIsSupported,
   checkPermissions,

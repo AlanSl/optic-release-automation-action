@@ -52,7 +52,7 @@ async function publishToNpm({
   npmTag,
   version,
   provenance,
-  hasAccess,
+  access,
 }) {
   await execWithOutput('npm', [
     'config',
@@ -60,12 +60,14 @@ async function publishToNpm({
     `//registry.npmjs.org/:_authToken=${npmToken}`,
   ])
 
-  const packageName = await getPackageName()
-
   const flags = ['--tag', npmTag]
-  // new packages and private packages disable provenance, they need to be public
-  if (hasAccess && provenance) {
-    flags.push('--provenance', '--access', 'public')
+
+  if (access) {
+    flags.push('--access', access)
+  }
+
+  if (provenance) {
+    flags.push('--provenance')
   }
 
   if (await allowNpmPublish(version)) {
