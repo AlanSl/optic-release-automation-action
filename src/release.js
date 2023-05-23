@@ -120,10 +120,10 @@ module.exports = async function ({ github, context, inputs }) {
     }
 
     if (provenance) {
-      const npmVersion = await getNpmVersion()
       // Fail fast with meaningful error if user wants provenance but their setup won't deliver,
       // and apply any necessary options tweaks.
-      publishOptions = ensureProvenanceViability(npmVersion, publishOptions)
+      const npmVersion = await getNpmVersion()
+      publishOptions = await ensureProvenanceViability(npmVersion, publishOptions)
     }
 
     if (npmToken) {

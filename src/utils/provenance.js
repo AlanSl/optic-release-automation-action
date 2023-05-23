@@ -78,15 +78,16 @@ async function getAccessAdjustment({ access } = {}) {
  *
  * @see https://docs.npmjs.com/generating-provenance-statements
  */
-function ensureProvenanceViability(npmVersion, publishOptions) {
+async function ensureProvenanceViability(npmVersion, publishOptions) {
   if (!npmVersion) throw new Error('Current npm version not provided')
   checkIsSupported(npmVersion)
   checkPermissions(npmVersion)
 
-  return {
+  const value = {
     ...publishOptions,
-    ...getAccessAdjustment(publishOptions),
+    ...await getAccessAdjustment(publishOptions),
   }
+  return value
 }
 
 /**
