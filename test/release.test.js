@@ -218,7 +218,7 @@ tap.test('Should publish to npm without optic', async () => {
 
 tap.test(
   'Should publish with provenance if flag set and conditions met',
-  async () => {
+  async t => {
     const { release, stubs } = setup({
       npmVersion: '9.5.0', // valid
       env: { ACTIONS_ID_TOKEN_REQUEST_URL: 'https://example.com' }, // valid
@@ -233,16 +233,19 @@ tap.test(
     })
 
     sinon.assert.notCalled(stubs.coreStub.setFailed)
+    t.pass('not failed')
+
     sinon.assert.calledWithMatch(stubs.publishToNpmStub, {
       npmToken: 'a-token',
       opticUrl: 'https://optic-test.run.app/api/generate/',
       npmTag: 'latest',
       provenance: true,
     })
+    t.pass('publish called')
   }
 )
 
-tap.test('Aborts publish with provenance if NPM version too old', async () => {
+tap.test('Aborts publish with provenance if NPM version too old', async t => {
   const { release, stubs } = setup({
     npmVersion: '9.4.0', // too old (is before 9.5.0)
     env: { ACTIONS_ID_TOKEN_REQUEST_URL: 'https://example.com' }, // valid
@@ -261,9 +264,10 @@ tap.test('Aborts publish with provenance if NPM version too old', async () => {
     stubs.coreStub.setFailed,
     'Provenance requires NPM >=9.5.0, but this action is using v9.4.0'
   )
+  t.pass('did set failed')
 })
 
-tap.test('Aborts publish with provenance if missing permission', async () => {
+tap.test('Aborts publish with provenance if missing permission', async t => {
   const { release, stubs } = setup({
     npmVersion: '9.5.0', // valid, but before missing var is correctly handled on NPM's side (9.6.1)
     // missing ACTIONS_ID_TOKEN_REQUEST_URL which is set from `id-token: write` permission.
@@ -277,15 +281,17 @@ tap.test('Aborts publish with provenance if missing permission', async () => {
       provenance: 'true',
     },
   })
+
   sinon.assert.calledWithMatch(
     stubs.coreStub.setFailed,
     'Provenance generation in GitHub Actions requires "write" access to the "id-token" permission'
   )
+  t.pass('did set failed')
 })
 
 tap.test(
   'Should publish with --access public if flag set',
-  async () => {
+  async t => {
     const { release, stubs } = setup()
     await release({
       ...DEFAULT_ACTION_DATA,
@@ -297,18 +303,21 @@ tap.test(
     })
 
     sinon.assert.notCalled(stubs.coreStub.setFailed)
+    t.pass('did not set failed')
+
     sinon.assert.calledWithMatch(stubs.publishToNpmStub, {
       npmToken: 'a-token',
       opticUrl: 'https://optic-test.run.app/api/generate/',
       npmTag: 'latest',
       access: 'public',
     })
+    t.pass('called publishToNpm')
   }
 )
 
 tap.test(
   'Should publish with --access restricted if flag set',
-  async () => {
+  async t => {
     const { release, stubs } = setup()
     await release({
       ...DEFAULT_ACTION_DATA,
@@ -320,18 +329,21 @@ tap.test(
     })
 
     sinon.assert.notCalled(stubs.coreStub.setFailed)
+    t.pass('did not set failed')
+
     sinon.assert.calledWithMatch(stubs.publishToNpmStub, {
       npmToken: 'a-token',
       opticUrl: 'https://optic-test.run.app/api/generate/',
       npmTag: 'latest',
       access: 'restricted',
     })
+    t.pass('called publishToNpm')
   }
 )
 
 tap.test(
   'Should disallow unsupported --access flag',
-  async () => {
+  async t => {
     const { release, stubs } = setup()
 
     const invalidString = 'public; node -e "throw new Error(`arbitrary command executed`)"'
@@ -349,6 +361,9 @@ tap.test(
       stubs.coreStub.setFailed,
       `Invalid "access" option provided ("${invalidString}"), should be one of "public", "restricted"`
     )
+    t.pass('did set failed')
+  }
+)
   }
 )
 

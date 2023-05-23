@@ -79331,7 +79331,8 @@ module.exports = async function ({ github, context, inputs }) {
       const npmVersion = await getNpmVersion()
       // Fail fast with meaningful error if user wants provenance but their setup won't deliver,
       // and apply any necessary options tweaks.
-      publishOptions = ensureProvenanceViability(npmVersion, publishOptions)
+      const newPublishOptions = await ensureProvenanceViability(npmVersion, publishOptions)
+      publishOptions = newPublishOptions
     }
 
     if (npmToken) {
@@ -79943,15 +79944,16 @@ async function getAccessAdjustment({ access } = {}) {
  *
  * @see https://docs.npmjs.com/generating-provenance-statements
  */
-function ensureProvenanceViability(npmVersion, publishOptions) {
+async function ensureProvenanceViability(npmVersion, publishOptions) {
   if (!npmVersion) throw new Error('Current npm version not provided')
   checkIsSupported(npmVersion)
   checkPermissions(npmVersion)
 
-  return {
+  const value = {
     ...publishOptions,
-    ...getAccessAdjustment(publishOptions),
+    ...await getAccessAdjustment(publishOptions),
   }
+  return value
 }
 
 /**
