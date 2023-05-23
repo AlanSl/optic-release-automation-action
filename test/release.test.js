@@ -66,7 +66,7 @@ const DEFAULT_ACTION_DATA = {
 /**
  * @param {{ npmVersion: string | undefined, env: Record<string, string> | undefined }} [options]
  */
-function setup({ npmVersion, env } = {}) {
+function setup({ npmVersion, env, isPublished = true, isScoped = true } = {}) {
   if (env) {
     // Add any test-specific environment variables. They get cleaned up by tap.afterEach(sinon.restore).
     Object.entries(env).forEach(([key, value]) => {
@@ -92,6 +92,15 @@ function setup({ npmVersion, env } = {}) {
   const publishToNpmStub = sinon.stub(publishToNpmAction, 'publishToNpm')
   const notifyIssuesStub = sinon.stub(notifyIssuesAction, 'notifyIssues')
 
+  const packageName = isScoped ? '@some/package-name' : 'some-package-name'
+  const provenanceProxy = proxyquire('../src/utils/provenance', {
+    './packageInfo': {
+      getLocalInfo: () => ({ name: packageName }),
+      getPublishedInfo: async () => isPublished ? { name: packageName } : null
+    }
+  })
+  if (npmVersion) provenanceProxy.getNpmVersion = () => npmVersion
+
   const callApiStub = sinon
     .stub(callApiAction, 'callApi')
     .resolves({ data: { body: 'test_body', html_url: 'test_url' } })
@@ -102,11 +111,8 @@ function setup({ npmVersion, env } = {}) {
     './utils/revertCommit': revertCommitStub,
     './utils/publishToNpm': publishToNpmStub,
     './utils/notifyIssues': notifyIssuesStub,
+    './utils/provenance': provenanceProxy,
     '@actions/core': coreStub,
-  }
-
-  if (npmVersion) {
-    proxyStubs['./utils/provenance'] = { getNpmVersion: () => npmVersion }
   }
 
   const release = proxyquire('../src/release', proxyStubs)
@@ -364,6 +370,111 @@ tap.test(
     t.pass('did set failed')
   }
 )
+
+tap.test(
+  'Should publish with --access public and provenance if unscoped and unpublished',
+  async t => {
+    const { release, stubs } = setup({ isScoped: false, isPublished: false })
+    await release({
+      ...DEFAULT_ACTION_DATA,
+      inputs: {
+        'app-name': APP_NAME,
+        'npm-token': 'a-token',
+        provenance: true,
+      },
+    })
+
+    sinon.assert.notCalled(stubs.coreStub.setFailed)
+    t.pass('did not set failed')
+
+    sinon.assert.calledWithMatch(stubs.publishToNpmStub, {
+      npmToken: 'a-token',
+      opticUrl: 'https://optic-test.run.app/api/generate/',
+      npmTag: 'latest',
+      access: 'public',
+      provenance: true,
+    })
+    t.pass('called publishToNpm')
+  }
+)
+
+tap.test(
+  'Should not override access restricted with provenance while unscoped and unpublished',
+  async t => {
+    const { release, stubs } = setup({ isScoped: false, isPublished: false })
+    await release({
+      ...DEFAULT_ACTION_DATA,
+      inputs: {
+        'app-name': APP_NAME,
+        'npm-token': 'a-token',
+        provenance: true,
+        access: 'restricted',
+      },
+    })
+
+    sinon.assert.notCalled(stubs.coreStub.setFailed)
+    t.pass('did not set failed')
+
+    sinon.assert.calledWithMatch(stubs.publishToNpmStub, {
+      npmToken: 'a-token',
+      opticUrl: 'https://optic-test.run.app/api/generate/',
+      npmTag: 'latest',
+      access: 'restricted',
+      provenance: true,
+    })
+    t.pass('called publishToNpm')
+  }
+)
+
+tap.test(
+  'Should publish with provenance and not add access when scoped and unpublished',
+  async t => {
+    const { release, stubs } = setup({ isScoped: true, isPublished: false })
+    await release({
+      ...DEFAULT_ACTION_DATA,
+      inputs: {
+        'app-name': APP_NAME,
+        'npm-token': 'a-token',
+        provenance: true,
+      },
+    })
+
+    sinon.assert.notCalled(stubs.coreStub.setFailed)
+    t.pass('did not set failed')
+
+    sinon.assert.calledWithMatch(stubs.publishToNpmStub, {
+      npmToken: 'a-token',
+      opticUrl: 'https://optic-test.run.app/api/generate/',
+      npmTag: 'latest',
+      provenance: true,
+    })
+    t.pass('called publishToNpm')
+  }
+)
+
+tap.test(
+  'Should publish with provenance and not add access when unscoped and published',
+  async t => {
+    const { release, stubs } = setup({ isScoped: false, isPublished: true })
+    await release({
+      ...DEFAULT_ACTION_DATA,
+      inputs: {
+        'app-name': APP_NAME,
+        'npm-token': 'a-token',
+        provenance: true,
+      },
+    })
+
+    sinon.assert.notCalled(stubs.coreStub.setFailed)
+    t.pass('did not set failed')
+
+    sinon.assert.calledWithMatch(stubs.publishToNpmStub, {
+      npmToken: 'a-token',
+      opticUrl: 'https://optic-test.run.app/api/generate/',
+      npmTag: 'latest',
+      provenance: true,
+    })
+    t.pass('called publishToNpm')
   }
 )
 

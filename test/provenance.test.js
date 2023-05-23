@@ -130,7 +130,7 @@ tap.test('getAccessAdjustment does nothing if package is on npm', async t => {
 tap.test(
   'ensureProvenanceViability fails fast if NPM version unavailable',
   async t => {
-    t.throws(
+    t.rejects(
       () => ensureProvenanceViability(),
       'Current npm version not provided'
     )
