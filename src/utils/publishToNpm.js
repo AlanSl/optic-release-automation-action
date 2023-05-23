@@ -12,16 +12,6 @@ async function allowNpmPublish(version) {
   const packageInfo = await getPublishedInfo()
   const packageName = packageInfo?.name
   // Package has not been published before
-
-  console.log(`
-  
-  
-  
-  >>>>
-  
-  
-  `, { packageInfo, packageName })
-
   if (!packageName) {
     return true
   }
@@ -46,18 +36,7 @@ async function allowNpmPublish(version) {
 
   return !packageVersionInfo
 }
-/**
- * 
- * @param {
- *  npmToken,
-    opticToken,
-    opticUrl,
-    npmTag,
-    version,
-    provenance: boolean
-    hasAccess: boolean
- * }  
- */
+
 async function publishToNpm({
   npmToken,
   opticToken,
