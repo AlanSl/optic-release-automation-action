@@ -43,7 +43,7 @@ function checkPermissions(npmVersion) {
 /**
  * NPM does an internal check on access that fails unnecessarily for first-time publication
  * of unscoped packages to NPM. Unscoped packages are always public, but NPM's provenance generation
- * doesn't realise this unless it sees the status in latest release or in explicit options.
+ * doesn't realise this unless it sees the status in a previous release or in explicit options.
  */
 async function getAccessAdjustment({ access } = {}) {
   // Don't overrule any user-set access preference.
@@ -59,16 +59,16 @@ async function getAccessAdjustment({ access } = {}) {
 
   // Don't do anything if the user has set any access control in package.json publishConfig.
   // https://docs.npmjs.com/cli/v9/configuring-npm/package-json#publishconfig
+  // Let NPM deal with that internally when `npm publish` reads the local package.json file.
   if (publishConfig?.access) return
 
   // Don't do anything if package is already published.
   const publishedInfo = await getPublishedInfo()
-  console.log({ publishedInfo })
   if (publishedInfo) return
 
-  // Only set explicit public access if it's already inherently public, a first publish
+  // Set explicit public access **only** if it's unscoped (inherently public), a first publish
   // (so we know NPM will fail to realise that this is inherently public), and the user
-  // has not attempted to set access explicitly anywhere.
+  // has not attempted to explicitly set access themselves anywhere.
   return { access: 'public' }
 }
 
