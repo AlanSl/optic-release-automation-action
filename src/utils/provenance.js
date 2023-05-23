@@ -1,6 +1,7 @@
 'use strict'
 const semver = require('semver')
 const { execWithOutput } = require('./execWithOutput')
+const { getLocalInfo, getPublishedInfo, isPackageNameScoped } = require('./packageInfo')
 
 /**
  * Abort if the user specified they want NPM provenance, but their CI's NPM version doesn't support it.
@@ -40,18 +41,50 @@ function checkPermissions(npmVersion) {
 }
 
 /**
- * Fail fast and throw a meaningful error if NPM Provenance will fail silently or misleadingly.
+ * NPM does an internal check on access that fails unnecessarily for first-time publication
+ * of unscoped packages to NPM. Unscoped packages are always public, but NPM's provenance generation
+ * doesn't realise this unless it sees the status in latest release or in explicit options.
+ */
+async function getAccessAdjustment({ access } = {}) {
+  // Don't overrule any user-set access preference.
+  if (access) return
+
+  const { name: packageName, publishConfig } = getLocalInfo()
+
+  // Don't do anything for scoped packages that require being made public explicitly.
+  // Let NPM's own validation handle it if a user tries to get provenance on a private package.
+  if (isPackageNameScoped(packageName)) return
+
+  // Don't do anything if the user has set any access control in package.json publishConfig.
+  // https://docs.npmjs.com/cli/v9/configuring-npm/package-json#publishconfig
+  if (publishConfig?.access) return
+
+  // Don't do anything if package is already published.
+  const publishedInfo = await getPublishedInfo()
+  console.log({ publishedInfo })
+  if (publishedInfo) return
+
+  // Only set explicit public access if it's already inherently public, a first publish
+  // (so we know NPM will fail to realise that this is inherently public), and the user
+  // has not attempted to set access explicitly anywhere.
+  return { access: 'public' }
+}
+
+/**
+ * Fail fast and throw a meaningful error if NPM Provenance will fail silently or misleadingly,
+ * and where necessary, tweak publish options without overriding user preferences or expectations.
  *
  * @see https://docs.npmjs.com/generating-provenance-statements
- *
- * @param {string} npmVersion
  */
-function checkProvenanceViability(npmVersion) {
+function ensureProvenanceViability(npmVersion, publishOptions) {
   if (!npmVersion) throw new Error('Current npm version not provided')
   checkIsSupported(npmVersion)
   checkPermissions(npmVersion)
-  // There are various other provenance requirements, such as specific package.json properties, but these
-  // may change in future NPM versions, and do fail with meaningful errors, so we let NPM handle those.
+
+  return {
+    ...publishOptions,
+    ...getAccessAdjustment(publishOptions),
+  }
 }
 
 /**
@@ -63,8 +96,9 @@ async function getNpmVersion() {
 }
 
 module.exports = {
-  checkProvenanceViability,
+  ensureProvenanceViability,
   getNpmVersion,
+  getAccessAdjustment,
   checkIsSupported,
   checkPermissions,
 }

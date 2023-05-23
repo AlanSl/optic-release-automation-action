@@ -4,7 +4,7 @@ const tap = require('tap')
 const sinon = require('sinon')
 const proxyquire = require('proxyquire')
 
-const setup = () => {
+const setup = ({ packageName =  'fakeTestPkg', published = true, packageInfoMock } = {}) => {
   const execWithOutputStub = sinon.stub()
   execWithOutputStub
     .withArgs('curl', [
@@ -12,15 +12,16 @@ const setup = () => {
       'https://optic-test.run.app/api/generate/optic-token',
     ])
     .returns('otp123')
-  execWithOutputStub
-    .withArgs('npm', ['view', '--json'])
-    .returns('{"name":"fakeTestPkg"}')
 
   // npm behavior < v8.13.0
-  execWithOutputStub.withArgs('npm', ['view', 'fakeTestPkg@v5.1.3']).returns('')
+  execWithOutputStub.withArgs('npm', ['view', `${packageName}@v5.1.3`]).returns('')
 
   const publishToNpmProxy = proxyquire('../src/utils/publishToNpm', {
     './execWithOutput': { execWithOutput: execWithOutputStub },
+    './packageInfo': packageInfoMock || {
+      getLocalInfo: () => ({ name: packageName }),
+      getPublishedInfo: async () => published ? { name: packageName, isProxied: true } : null,
+    }
   })
 
   return { execWithOutputStub, publishToNpmProxy }
@@ -74,10 +75,8 @@ tap.test('Should publish to npm with optic', async t => {
 
 tap.test(
   "Should publish to npm when package hasn't been published before",
-  async () => {
-    const { publishToNpmProxy, execWithOutputStub } = setup()
-
-    execWithOutputStub.withArgs('npm', ['view', '--json']).resolves('')
+  async t => {
+    const { publishToNpmProxy, execWithOutputStub } = setup({ published: false })
 
     await publishToNpmProxy.publishToNpm({
       npmToken: 'a-token',
@@ -90,15 +89,18 @@ tap.test(
       'pack',
       '--dry-run',
     ])
+    t.pass('npm pack called')
+
     sinon.assert.calledWithExactly(execWithOutputStub, 'npm', [
       'publish',
       '--tag',
       'latest',
     ])
+    t.pass('npm publish called')
   }
 )
 
-tap.test('Should publish to npm without optic', async () => {
+tap.test('Should publish to npm without optic', async t => {
   const { publishToNpmProxy, execWithOutputStub } = setup()
   await publishToNpmProxy.publishToNpm({
     npmToken: 'a-token',
@@ -111,16 +113,19 @@ tap.test('Should publish to npm without optic', async () => {
     'pack',
     '--dry-run',
   ])
+  t.pass('npm pack called')
+
   sinon.assert.calledWithExactly(execWithOutputStub, 'npm', [
     'publish',
     '--tag',
     'latest',
   ])
+  t.pass('npm publish called')
 })
 
 tap.test(
   'Should skip npm package publication when it was already published',
-  async () => {
+  async t => {
     const { publishToNpmProxy, execWithOutputStub } = setup()
 
     execWithOutputStub
@@ -141,11 +146,14 @@ tap.test(
       '--tag',
       'latest',
     ])
+    t.pass('publish never called with otp')
+
     sinon.assert.neverCalledWith(execWithOutputStub, 'npm', [
       'publish',
       '--tag',
       'latest',
     ])
+    t.pass('publish never called')
   }
 )
 
@@ -168,6 +176,7 @@ tap.test('Should stop action if package info retrieval fails', async t => {
     t.equal(e.message, 'Network Error')
   }
 
+  
   sinon.assert.neverCalledWith(execWithOutputStub, 'npm', [
     'publish',
     '--otp',
@@ -226,8 +235,10 @@ tap.test(
 
 tap.test(
   'Should continue action if package info returns not found',
-  async () => {
-    const { publishToNpmProxy, execWithOutputStub } = setup()
+  async t => {
+    const { publishToNpmProxy, execWithOutputStub } = setup({
+      packageInfoMock: proxyquire()
+    })
 
     execWithOutputStub
       .withArgs('npm', ['view', '--json'])
@@ -248,17 +259,20 @@ tap.test(
       'pack',
       '--dry-run',
     ])
+    t.pass('npm pack called')
+
     sinon.assert.calledWithExactly(execWithOutputStub, 'npm', [
       'publish',
       '--tag',
       'latest',
     ])
+    t.pass('npm publish called')
   }
 )
 
 tap.test(
   'Should continue action if package version info returns not found',
-  async () => {
+  async t => {
     const { publishToNpmProxy, execWithOutputStub } = setup()
 
     execWithOutputStub
@@ -276,15 +290,18 @@ tap.test(
       'pack',
       '--dry-run',
     ])
+    t.pass('npm pack called')
+
     sinon.assert.calledWithExactly(execWithOutputStub, 'npm', [
       'publish',
       '--tag',
       'latest',
     ])
+    t.pass('npm publish called')
   }
 )
 
-tap.test('Adds --provenance flag when provenance option provided', async () => {
+tap.test('Adds --provenance flag when provenance option provided', async t => {
   const { publishToNpmProxy, execWithOutputStub } = setup()
   await publishToNpmProxy.publishToNpm({
     npmToken: 'a-token',
@@ -294,15 +311,17 @@ tap.test('Adds --provenance flag when provenance option provided', async () => {
     provenance: true,
   })
 
-  sinon.assert.calledWithExactly(execWithOutputStub, 'npm', [
-    'publish',
-    '--tag',
-    'latest',
-    '--provenance',
-  ])
+  t.doesNotThrow(
+    () => sinon.assert.calledWithExactly(execWithOutputStub, 'npm', [
+      'publish',
+      '--tag',
+      'latest',
+      '--provenance',
+    ])
+  )
 })
 
-tap.test('Adds --access flag if provided as an input', async () => {
+tap.test('Adds --access flag if provided as an input', async t => {
   const { publishToNpmProxy, execWithOutputStub } = setup()
   await publishToNpmProxy.publishToNpm({
     npmToken: 'a-token',
@@ -312,11 +331,13 @@ tap.test('Adds --access flag if provided as an input', async () => {
     access: 'public',
   })
 
-  sinon.assert.calledWithExactly(execWithOutputStub, 'npm', [
-    'publish',
-    '--tag',
-    'latest',
-    '--access',
-    'public',
-  ])
+  t.doesNotThrow(
+    () => sinon.assert.calledWithExactly(execWithOutputStub, 'npm', [
+      'publish',
+      '--tag',
+      'latest',
+      '--access',
+      'public',
+    ])
+  )
 })
