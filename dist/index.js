@@ -79841,7 +79841,8 @@ async function getPublishedInfo() {
 /**
  * Get info from the local package.json file.
  * 
- * @TODO test with workspaces, monorepos etc.
+ * This might need to become a bit more sophisticated if support for monorepos is added,
+ * @see https://github.com/nearform-actions/optic-release-automation-action/issues/177 
  */
 function getLocalInfo() {
   const packageJsonFile = fs.readFileSync('./package.json', 'utf8')
@@ -79850,21 +79851,9 @@ function getLocalInfo() {
   return packageInfo
 }
 
-/**
- * Checks if an NPM package name has a scope ('@some-scope/package-name')
- * and is therefore capable of being published privately. 
- * 
- * @param {string} packageName 
- * @returns {boolean}
- */
-function isPackageNameScoped(packageName) {
-  return packageName.match(/^@.+\/./)
-}
-
 module.exports = {
   getLocalInfo,
   getPublishedInfo,
-  isPackageNameScoped,
 }
 
 
@@ -79919,7 +79908,7 @@ function checkPermissions(npmVersion) {
 /**
  * NPM does an internal check on access that fails unnecessarily for first-time publication
  * of unscoped packages to NPM. Unscoped packages are always public, but NPM's provenance generation
- * doesn't realise this unless it sees the status in latest release or in explicit options.
+ * doesn't realise this unless it sees the status in a previous release or in explicit options.
  */
 async function getAccessAdjustment({ access } = {}) {
   // Don't overrule any user-set access preference.
@@ -79927,22 +79916,24 @@ async function getAccessAdjustment({ access } = {}) {
 
   const { name: packageName, publishConfig } = getLocalInfo()
 
-  // Don't do anything for scoped packages that require being made public explicitly.
+  // Don't do anything for scoped packages - those require being made public explicitly.
   // Let NPM's own validation handle it if a user tries to get provenance on a private package.
-  if (isPackageNameScoped(packageName)) return
+  // `.startsWith('@')` is what a lot of NPM internal code use to detect scoped packages,
+  // they don't export any more sophisticated scoped name detector any more.
+  if (packageName.startsWith('@')) return
 
   // Don't do anything if the user has set any access control in package.json publishConfig.
   // https://docs.npmjs.com/cli/v9/configuring-npm/package-json#publishconfig
+  // Let NPM deal with that internally when `npm publish` reads the local package.json file.
   if (publishConfig?.access) return
 
   // Don't do anything if package is already published.
   const publishedInfo = await getPublishedInfo()
-  console.log({ publishedInfo })
   if (publishedInfo) return
 
-  // Only set explicit public access if it's already inherently public, a first publish
+  // Set explicit public access **only** if it's unscoped (inherently public), a first publish
   // (so we know NPM will fail to realise that this is inherently public), and the user
-  // has not attempted to set access explicitly anywhere.
+  // has not attempted to explicitly set access themselves anywhere.
   return { access: 'public' }
 }
 
@@ -80000,16 +79991,6 @@ async function allowNpmPublish(version) {
   const packageInfo = await getPublishedInfo()
   const packageName = packageInfo?.name
   // Package has not been published before
-
-  console.log(`
-  
-  
-  
-  >>>>
-  
-  
-  `, { packageInfo, packageName })
-
   if (!packageName) {
     return true
   }
@@ -80034,18 +80015,7 @@ async function allowNpmPublish(version) {
 
   return !packageVersionInfo
 }
-/**
- * 
- * @param {
- *  npmToken,
-    opticToken,
-    opticUrl,
-    npmTag,
-    version,
-    provenance: boolean
-    hasAccess: boolean
- * }  
- */
+
 async function publishToNpm({
   npmToken,
   opticToken,
