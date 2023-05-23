@@ -6,7 +6,6 @@ const proxyquire = require('proxyquire')
 const {
   getLocalInfo,
   getPublishedInfo,
-  isPackageNameScoped
 } = require('../src/utils/packageInfo') 
 
 
@@ -109,18 +108,3 @@ tap.test('getLocalInfo gets data from stringified JSON from file', async t => {
   const packageInfo = mocks.getLocalInfo()
   t.match(packageInfo, mockPackageInfo)
 })
-
-tap.test('isPackageNameScoped treats scoped package names as scoped', t => {
-  t.ok(isPackageNameScoped('@nearform/package'))
-  t.ok(isPackageNameScoped('@nearform/some-package'))
-  t.ok(isPackageNameScoped('@some-scope/package'))
-  t.ok(isPackageNameScoped('@some-scope/some-package'))
-})
-
-tap.test('isPackageNameScoped treats unscoped package names as unscoped', t => {
-  t.notOk(isPackageNameScoped('nearform-some-package'))
-  t.notOk(isPackageNameScoped('nearform/@some-package'))
-  t.notOk(isPackageNameScoped('@some-scope-package'))
-  t.notOk(isPackageNameScoped('some-scope/some-package'))
-})
-

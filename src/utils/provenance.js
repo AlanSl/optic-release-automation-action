@@ -51,9 +51,11 @@ async function getAccessAdjustment({ access } = {}) {
 
   const { name: packageName, publishConfig } = getLocalInfo()
 
-  // Don't do anything for scoped packages that require being made public explicitly.
+  // Don't do anything for scoped packages - those require being made public explicitly.
   // Let NPM's own validation handle it if a user tries to get provenance on a private package.
-  if (isPackageNameScoped(packageName)) return
+  // `.startsWith('@')` is what a lot of NPM internal code use to detect scoped packages,
+  // they don't export any more sophisticated scoped name detector any more.
+  if (packageName.startsWith('@')) return
 
   // Don't do anything if the user has set any access control in package.json publishConfig.
   // https://docs.npmjs.com/cli/v9/configuring-npm/package-json#publishconfig

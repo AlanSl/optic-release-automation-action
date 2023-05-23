@@ -22,7 +22,8 @@ async function getPublishedInfo() {
 /**
  * Get info from the local package.json file.
  * 
- * @TODO test with workspaces, monorepos etc.
+ * This might need to become a bit more sophisticated if support for monorepos is added,
+ * @see https://github.com/nearform-actions/optic-release-automation-action/issues/177 
  */
 function getLocalInfo() {
   const packageJsonFile = fs.readFileSync('./package.json', 'utf8')
@@ -31,19 +32,7 @@ function getLocalInfo() {
   return packageInfo
 }
 
-/**
- * Checks if an NPM package name has a scope ('@some-scope/package-name')
- * and is therefore capable of being published privately. 
- * 
- * @param {string} packageName 
- * @returns {boolean}
- */
-function isPackageNameScoped(packageName) {
-  return packageName.match(/^@.+\/./)
-}
-
 module.exports = {
   getLocalInfo,
   getPublishedInfo,
-  isPackageNameScoped,
 }
